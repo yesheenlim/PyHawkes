@@ -11,7 +11,7 @@ class Hawkes:
         '''
         Implements the Hawkes marked point process as described in
         Liniger's thesis [Liniger, 2012], assuming a polynomial decay
-        function and Pareto mark distributions.
+        function.
 
         d: number of multivariate point process components (scalar, N)
         '''
@@ -20,7 +20,7 @@ class Hawkes:
         self.alpha = np.empty(self.numComponents); self.alpha.fill(1e-5)
         self.markDist = []
         for i in xrange(self.numComponents):
-            self.markDist.append(md.Pareto())
+            self.markDist.append(md.ParetoLinear())
 
     def setParam(self,param):
         '''
@@ -200,3 +200,20 @@ class Hawkes:
             rand.append(random.uniform(lb,lb+1.0))
 
         return rand
+
+    def MLE(self,t,j,x,method=None,x0=None):
+        '''
+        Estimates the parameters of the Hawkes model using maximum
+        likelihood estimation, via the scipy's optimization library.
+        '''
+        if x0 == None:
+            x0 = self._initRandomValues()
+
+        nLL = lambda *args: - self.LogLikelihood(*args)
+        result = op.minimize( fun = nLL,
+                            x0 = x0,
+                            args = (t,j,x),
+                            method = method,
+                            jac = False,
+                            bounds = self._paramBounds())
+        return result
