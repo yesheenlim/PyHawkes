@@ -147,19 +147,12 @@ class Hawkes:
         _T = _t[-1]
         compensator = self.ibParam.eta[j] * (_T - _t[0])
 
-        for m in xrange(len(_t)-1,-1,-1):
+        for m in xrange(len(_t)-1-1,-1,-1):
             tm,dm,xm = (_t[m],_j[m],_x[m])
-            if _T - tm >= self._quantile(j):
-                break
+            if _T - tm > self._quantile(j):
+                compensator += self.ibParam.Q[j,dm]*self.markDist[dm].Impact(xm)
             else:
                 compensator += self.ibParam.Q[j,dm]*self._cumulativeDecay(j,_T-tm)*self.markDist[dm].Impact(xm)
-
-        for m in xrange(len(_t)):
-            tm,dm,xm = (_t[m],_j[m],_x[m])
-            if _T - tm <= self._quantile(j):
-                break
-            else:
-                compensator += self.ibParam.Q[j,dm]*self.markDist[dm].Impact(xm)
 
         return compensator
 
@@ -180,7 +173,6 @@ class Hawkes:
         '''
         Aggregate the bounds for eta, Q, alpha, markParam, in that order.
         '''
-        ub = 30
         bound = []
         bound.extend(self.ibParam.getParamBounds())
         bound.extend([(1e-5,10)]*self.numComponents)
@@ -217,3 +209,32 @@ class Hawkes:
                             jac = False,
                             bounds = self._paramBounds())
         return result
+
+    def Residual(self,t,j,x):
+        '''
+        Returns the residual process of the original data, given the
+        assumption that the original Hawkes model is correct.
+        '''
+        tau = np.zeros(len(t))
+        xi = np.zeros(len(x))
+        Theta = np.zeros((len(t),self.numComponents))
+        q = max(self._quantile(0),self._quantile(1))
+
+        for i in xrange(1,len(t)):
+            for e in xrange(self.numComponents):
+                Theta[i,e] = Theta[i-1,e] + self.ibParam.Q[e,j[i]]*self.markDist[j[i]].Impact(x[i])
+
+        mask = []
+        for i in xrange(len(t)):
+            di = j[i]
+            for m0 in xrange(len(t)):
+                if t[i]-t[m0] <= q and t[i]-t[m0-1] > q:
+                    mask.append(i)
+                    tau[i] = self.ibParam.eta[di]*(t[i]-t[0]) + Theta[m0-1,di]
+                    for m in xrange(m0,i-1):
+                        tm,dm,xm = (t[m],j[m],x[m])
+                        tau[i] += self.ibParam.Q[di,dm]*self._cumulativeDecay(di,t[i]-tm)*self.markDist[dm].Impact(xm)
+                    xi[i] = self.markDist[di].sample()
+                    break
+
+        return (j[mask], t[mask], x[mask], tau[mask], xi[mask])
