@@ -10,8 +10,8 @@ class Hawkes:
     def __init__(self,d):
         '''
         Implements the Hawkes marked point process as described in
-        Liniger's thesis [Liniger, 2012], assuming a polynomial decay
-        function.
+        Liniger's thesis [Liniger, 2012], assuming a polynomial impact
+        function and exponential decay function.
 
         d: number of multivariate point process components (scalar, N)
         '''
@@ -207,7 +207,8 @@ class Hawkes:
                             args = (t,j,x),
                             method = method,
                             jac = False,
-                            bounds = self._paramBounds())
+                            bounds = self._paramBounds(),
+                            options = {'disp':True})
         return result
 
     def Residual(self,t,j,x):

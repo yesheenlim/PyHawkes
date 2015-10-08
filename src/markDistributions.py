@@ -2,7 +2,7 @@
 import random
 import math
 
-class ParetoExponential:
+class ParetoPolynomial:
     def __init__(self):
         """
         Pareto distribution (as defined by Liniger) with polynomial
