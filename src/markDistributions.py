@@ -1,6 +1,7 @@
 
 import random
 import math
+import scipy.optimize as op
 
 class ParetoPolynomial:
     def __init__(self):
@@ -117,3 +118,35 @@ class ParetoLinear:
         numerator = (self.rho-1.0)*(self.rho-2.0)*(self.alpha+self.beta*x)
         denominator = self.alpha*(self.rho-1.0)*(self.rho-2.0)+self.beta*self.mu*(self.rho-2.0)
         return numerator/denominator
+
+    def LogLikelihood(self, theta, *args):
+        self.mu, self.rho = theta
+        data = args
+
+        loglikelihood = 0
+        for x in data:
+            density = self.Density(x)
+            loglikelihood += math.log(density)
+
+        return loglikelihood
+
+    def MLE(self,x,method=None,x0=None):
+        if x0 == None:
+            x0 = self._initRandomValues()
+        nLL = lambda *args: - self.LogLikelihood(*args)
+        result = op.minimize( fun = nLL,
+                                    x0 = x0,
+                                    args = x,
+                                    method = method,
+                                    jac = False,
+                                    bounds = self.getDistBounds())
+        return result
+
+
+    def _initRandomValues(self):
+        rand = []
+        for lb,ub in self.getDistBounds():
+            if lb is None:
+                lb = 0.0
+            rand.append(random.uniform(lb,lb+1.0))
+        return rand
